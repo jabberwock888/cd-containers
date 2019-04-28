@@ -5,7 +5,7 @@ metadata:
   name: myapp
   namespace: myapp
   annotations:
-    flux.weave.works/ignore: 'true'
+    flux.weave.works/ignore: 'false'
     flux.weave.works/automated: "true"
     flux.weave.works/tag.chart-image: "glob:*"
 spec:
@@ -16,13 +16,13 @@ spec:
     ref: master
   values:
     image:
-      repository: REGISTRY/REPO/IMAGE
+      repository: docker.io/jabberwock88/cd-container
       tag: 1
       canary:
         enabled: true
         istioIngress:
           enabled: true
           gateway: cloud-gw.istio-system.svc.cluster.local
-          host: MY_SVC_IP.xip.io
+          host: 206.189.243.67.xip.io
         loadtest:
           enabled: true
