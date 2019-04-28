@@ -16,13 +16,13 @@ spec:
     ref: master
   values:
     image:
-      repository: REGISTRY/REPO/demo-gitops
-      tag: TAG
+      repository: REGISTRY/REPO/IMAGE
+      tag: 1
       canary:
         enabled: true
         istioIngress:
           enabled: true
           gateway: cloud-gw.istio-system.svc.cluster.local
-          host: myapp.example.org
+          host: MY_SVC_IP.xip.io
         loadtest:
           enabled: true
