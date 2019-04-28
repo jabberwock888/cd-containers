@@ -1,0 +1,28 @@
+---
+apiVersion: flux.weave.works/v1beta1
+kind: HelmRelease
+metadata:
+  name: myapp
+  namespace: myapp
+  annotations:
+    flux.weave.works/ignore: 'true'
+    flux.weave.works/automated: "true"
+    flux.weave.works/tag.chart-image: "glob:*"
+spec:
+  releaseName: myapp
+  chart:
+    git: git@github.com:skhedim/demo-gitops.git
+    path: charts/myapp
+    ref: master
+  values:
+    image:
+      repository: REGISTRY/REPO/demo-gitops
+      tag: TAG
+      canary:
+        enabled: true
+        istioIngress:
+          enabled: true
+          gateway: cloud-gw.istio-system.svc.cluster.local
+          host: myapp.example.org
+        loadtest:
+          enabled: true
