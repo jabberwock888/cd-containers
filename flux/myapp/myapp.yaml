@@ -16,7 +16,7 @@ spec:
     ref: master
   values:
     image:
-      repository: docker.io/jabberwock88/cd-container
+      repository: jabberwock88/cd-container
       tag: 1
       canary:
         enabled: true
