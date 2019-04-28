@@ -7,7 +7,7 @@ metadata:
   annotations:
     flux.weave.works/ignore: 'false'
     flux.weave.works/automated: "true"
-    flux.weave.works/tag.chart-image: "glob:*"
+    flux.weave.works/tag.chart-image: semver:~1.0
 spec:
   releaseName: myapp
   chart:
@@ -17,7 +17,7 @@ spec:
   values:
     image:
       repository: jabberwock88/cd-container
-      tag: 1
+      tag: 1.0.0
       canary:
         enabled: true
         istioIngress:
