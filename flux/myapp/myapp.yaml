@@ -5,7 +5,7 @@ metadata:
   name: myapp
   namespace: myapp
   annotations:
-    flux.weave.works/ignore: 'false'
+    flux.weave.works/ignore: 'true'
     flux.weave.works/automated: "true"
     flux.weave.works/tag.chart-image: semver:~1.0
 spec:

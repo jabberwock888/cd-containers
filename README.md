@@ -14,26 +14,24 @@ Requirements
 Prepare the cluster
 -----------------------
 
-Commencons par installer les outils nécessaires pour utiliser notre cluster comme infrastruture de continous delivery. Pour suivre ce tutoriel vous devez avoir un cluster K8S fonctionnel et avoir configurer la connexion à celui-ci avec les droits admnistrateur via kubectl.
+Let's start by installing the necessary tools to use our cluster as a continuous delivery infrastructure. To follow this tutorial you must have a working K8S cluster and have configured the connection to it with administrator rights via kubectl.
 
 #### Helm install
 
-Télécharger la dernière version de Helm pour votre système d'exploitation à l'URL suivante: https://github.com/helm/helm/releases
+Download the latest version of Helm for your operating system at the following URL: https://github.com/helm/helm/releases
 
 ```bash
 # Linux install
-
  wget https://storage.googleapis.com/kubernetes-helm/helm-v2.13.1-linux-amd64.tar.gz
  tar zxvf helm-v2.13.1-linux-amd64.tar.gz
  sudo mv linux-amd64/helm /usr/local/bin/
  rm -rf linux-amd64
 ```
 
-On va maintenant installer Tiller sur le cluster, il va falloir créer un compte pour que tiller puisse déployer nos applications sur un cluster avec RBAC activé.
+We will now install Tiller on the cluster, we will have to create an account so that tiller can deploy our applications on a cluster with RBAC enabled.
 
 ```yaml
 # cluster-admin-tiller.yaml
-
 apiVersion: v1
 kind: ServiceAccount
 metadata:
@@ -68,16 +66,15 @@ Server: &version.Version{SemVer:"v2.13.1", GitCommit:"618447cbf203d147601b4b9bd7
 
 #### Weave Flux
 
-Maintenant queHelm est installé, nous allons pouvoir déployer les différentes application s dont nousa vons besoin, commencons par Flux  pour la partie GitOps.
+Now that Helm is installed, we will be able to deploy the different applications we need, starting with Flux for the GitOps part.
 
-N'oubliez pas de fork ce repo sur votre compte vous aurez besoin de l'URL de votre fork pendant l'installation de flux.
+> Don't forget to fork this repo on your account you will need the URL of your fork during the installation of feeds.
 
 ```bash
 helm repo add weaveworks https://weaveworks.github.io/flux
 kubectl apply -f https://raw.githubusercontent.com/weaveworks/flux/master/deploy-helm/flux-helm-release-crd.yaml
 
 # Install Weave Flux and its Helm Operator by specifying your fork URL (Just change your user)
-
 helm upgrade -i flux \
 --set helmOperator.create=true \
 --set helmOperator.createCRD=false \
@@ -99,13 +96,12 @@ ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDW+goQDzlTdo...
 
 #### Istio
 
-Maintenant que nous avons installés Flux, nous allons pouvoir l'utiliser pour déployer les applications manquantes en mode GitOps. Dans ce repo, il y a déjà la configuration nécessaire pour installer Istio via Flux. 
+Now that we have installed Flux, we will be able to use it to deploy missing applications in GitOps mode. In this repo, there is already the necessary configuration to install Istio via Flux. 
 
-Il faut juste retirer l'annotation ignore, pour que Flux déploie automatiquement Istio. Commencons par installer le chart Istio-init en charge des CRDs de Istio.
+You just have to remove the ignore annotation, so that Flux automatically deploys Istio. Let's start by installing the Istio-init chart in charge of Istio's CRDs.
 
 ```yaml
 # Edit the ini-istio-1.1.x.yaml and change the weave.work/ignore annotation to false
-
 ---
 apiVersion: flux.weave.works/v1beta1
 kind: HelmRelease
@@ -140,7 +136,7 @@ helm ls | grep istio-init
 init-istio      1       DEPLOYED        istio-init-1.1.0        1.1.0           istio-system
 ```
 
-Now follow the same process for the "istio-1.1.x.yaml file", and finally for "gw-istio-system.yaml" file. Vous devez respecter cette odre car les ressources sont dépendantes les unes des autres. Vérifions que tout soit bien installé avant de continuer.
+Now follow the same process for the "istio-1.1.x.yaml file", and finally for "gw-istio-system.yaml" file. You must respect this order because the resources are dependent on each other. Let's make sure everything is properly installed before we continue.
 
 ```bash
 # You should see these 3 Helm charts
@@ -172,9 +168,9 @@ prometheus-66c9f5694-tvstz                1/1     Running     0          12m
 
 #### Flagger
 
-Dernière application Flagger pour l'automatisation du déploiement canary avec Istio. Nous allons utilser flux pour le déployer comme nous avons fait avec Istio.
+Last application for the automation of canary deployment with Istio. We will use flux to deploy it as we did with Istio.
 
-Même procédé éditez simplement le fichier flagger-0.9.0.yaml et changer l'annotation flux.weave.works/ignore en false.
+Same procedure simply edit the flagger-0.9.0.yaml file and change the annotation flux.weave.works/ignore to false.
 
 ```yaml
 ---
@@ -204,9 +200,9 @@ flagger         1                 DEPLOYED        flagger-0.9.0           0.9.0 
 Build and deploy our app
 -------------------------
 
-Maintenant nous allons pouvoir déployer notre application sur le cluster, et profiter des focntions de déploiement canary, ainsi que le déploiement via Gitops.
+Now we will be able to deploy our application on the cluster, and take advantage of the canary deployment features, as well as the deployment via Gitops.
 
-D'abord on va build notre application via un container docker, et publier sa première version sur la registry docker hub. Pour la simplicité de l'exemple nous allons simplement build une image nginx avec un index.html modifié
+First we will build our application via a container, and publish its first version on the dockerhub registry.  For the simplicity of the example we will simply build a nginx image with a modified html index.
 
 ```bash
 cd demo-gitops/app
@@ -215,7 +211,7 @@ docker build -t REGISTRY/REPOSITORY/myapp:1.0.0 .
 docker push REGISTRY/REPOSITORY/myapp:1.0.0
 ```
 
-Ensuite editez le fichier de déploiement flux pour votre application.
+Then edit the flow deployment file for your application.
 
 ```yaml
 ---
@@ -250,7 +246,7 @@ spec:
         host: MY_SVC_IP.xip.io
 ```
 
-Push your changes, et vous devriez être capable d'accéder à votre application en utilisant l'url http://MY_SVC_IP.xip.io.
+Push your changes, and you should be able to access your application using the url http://MY_SVC_IP.xip.io.
 
 Canary deployment with Istio/Flagger
 ------------------------------------
