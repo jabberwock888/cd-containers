@@ -78,7 +78,7 @@ kubectl apply -f https://raw.githubusercontent.com/weaveworks/flux/master/deploy
 helm upgrade -i flux \
 --set helmOperator.create=true \
 --set helmOperator.createCRD=false \
---set git.url=git@github.com:jabberwock888/cd-containers.git \
+--set git.url=git@github.com:<YOUR_USER>/cd-containers.git \
 --set git.path=flux/ \
 --namespace flux \
 weaveworks/flux
@@ -128,11 +128,12 @@ spec:
 > Do not forget to push your changes !
 
 ```bash
+# Check the logs to see the deployment of the helm chart
 kubectl logs -f deployment/flux -n flux
 Event(v1.ObjectReference{Kind:"HelmRelease", Namespace:"istio-system", Name:"init-istio", UID:"b620d559-6998-11e9-8381-8e7b409193c5", APIVersion:"flux.weave.works/v1beta1", ResourceVersion:"6823", FieldPath:""}): type: 'Normal' reason: 'ChartSynced' Chart managed by HelmRelease processed successfully
 
 #Istio-init chart should be installed now
-helm ls | grep istio-init
+helm ls | grep init-istio
 init-istio      1       DEPLOYED        istio-init-1.1.0        1.1.0           istio-system
 ```
 
@@ -211,7 +212,7 @@ docker build -t REGISTRY/REPOSITORY/myapp:1.0.0 .
 docker push REGISTRY/REPOSITORY/myapp:1.0.0
 ```
 
-Then edit the flow deployment file for your application.
+Then edit the flux deployment file for your application.
 
 ```yaml
 ---
@@ -396,5 +397,56 @@ docker push REGISTRY/REPOSITORY/myapp:1.0.1
 
 # Wait for flux to detect the new image in the registry
 kubectl -n flux logs -f $(kubectl -n flux get pods -l app=flux -o jsonpath='{.items[0].metadata.name}')
+```
+
+Une fois que flux a détecté qu'une nouvelle image a été poussé dans la registry, que son tag correspond au filtre "tag.chart-image: semver:~1.0" Il déploie l'image et incrémente la révision du helm chart.
+
+A la suite de ça, Flagger qui surveille le namespace myapp et attends pour q'uune image soit changé sur un déploiement. Quand il detecte le changement d'image opéré par Flux, il va créer un second déploiement avec l'ancienne image, un autre avec la nouvelle nommé myapp-canary et créer un Virtual service pour load balancer le traffic entre les deux déploiements.
+
+```yaml
+apiVersion: networking.istio.io/v1alpha3
+kind: VirtualService
+metadata:
+  name: myapp
+  namespace: myapp
+  ownerReferences:
+  - apiVersion: flagger.app/v1alpha3
+    blockOwnerDeletion: true
+    controller: true
+    kind: Canary
+    name: myapp
+spec:
+  gateways:
+  - cloud-gw.istio-system.svc.cluster.local
+  - mesh
+  hosts:
+  - <MY_SVc_IP>.xip.io
+  - myapp
+  http:
+  - route:
+  # We see the two deployments and the weight of each corresponding to the percentage of traffic oriented towards the two deployments
+    - destination:
+        host: myapp-primary
+        port:
+          number: 80
+      weight: 60
+    - destination:
+        host: myapp-canary
+        port:
+          number: 80
+      weight: 40
+```
+
+```bash
+# The two deployments created by Flagger during the image change by Flux
+kubectl get deploy -n myapp
+NAME            READY   UP-TO-DATE   AVAILABLE   AGE
+myapp-canary    1/1     1            1           1m
+myapp-primary   1/1     1            1           1m
+
+kubectl get canary -n myapp
+# We can see the progression and redirection of traffic to the canary deployment
+NAME    STATUS      WEIGHT   
+myapp   Progressing   10      
 ```
 

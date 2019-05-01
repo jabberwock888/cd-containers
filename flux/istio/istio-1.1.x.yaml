@@ -15,3 +15,5 @@ spec:
   values:
     gateways:
       enabled: true
+    kiali:
+      enabled: true
