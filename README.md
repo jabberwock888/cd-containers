@@ -7,7 +7,7 @@ Requirements
 ------------
 
   * A Kubernetes cluster (You can use managed Kubernetes cluster on GCP, AWS, Azure, OVH) 
-  * helm, kubectl, and git binaries.
+  * docker, helm, kubectl, and git binaries.
   * Fork this repo into your github account
   * Access to a public registry (Docker HUB, GCR, Quay)
 
@@ -393,7 +393,6 @@ In parallel Flux monitors the registry and waits for a new tag to be pushed into
 # Change REGISTRY/REPOSITORY with the correct values for your registry.
 docker build -t REGISTRY/REPOSITORY/myapp:1.0.1 .
 docker push REGISTRY/REPOSITORY/myapp:1.0.1
-```
 
 # Wait for flux to detect the new image in the registry
 kubectl -n flux logs -f $(kubectl -n flux get pods -l app=flux -o jsonpath='{.items[0].metadata.name}')

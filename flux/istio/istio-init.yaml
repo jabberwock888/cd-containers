@@ -5,7 +5,7 @@ metadata:
   name: init-istio
   namespace: istio-system
   annotations:
-    flux.weave.works/ignore: 'true'
+    flux.weave.works/ignore: 'false'
 spec:
   releaseName: init-istio
   chart:
