@@ -17,4 +17,3 @@ spec:
       enabled: true
     kiali:
       enabled: true
-      createDemoSecret: true

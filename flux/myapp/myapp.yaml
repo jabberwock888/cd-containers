@@ -11,7 +11,7 @@ metadata:
 spec:
   releaseName: myapp
   chart:
-    git: git@github.com:skhedim/demo-gitops.git
+    git: git@github.com:jabberwock888/cd-containers.git
     path: charts/myapp
     ref: master
   values:
