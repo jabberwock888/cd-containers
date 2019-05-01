@@ -16,8 +16,8 @@ spec:
     ref: master
   values:
     image:
-      repository: REGISTRY/REPOSITORY/myapp
-      tag: 1.0.0
+      repository: jabberwock88/cd-container
+      tag: 1.0.7
     canary:
       enabled: true
       istioIngress:
