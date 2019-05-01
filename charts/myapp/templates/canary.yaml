@@ -45,8 +45,8 @@ spec:
             rate(
                 istio_requests_total{
                   reporter="destination",
-                  destination_workload_namespace="test",
-                  destination_workload="podinfo",
+                  destination_workload_namespace="myapp",
+                  destination_workload="myapp",
                   response_code!="404"
                 }[1m]
             )
@@ -56,8 +56,8 @@ spec:
             rate(
                 istio_requests_total{
                   reporter="destination",
-                  destination_workload_namespace="test",
-                  destination_workload="podinfo"
+                  destination_workload_namespace="myapp",
+                  destination_workload="myapp"
                 }[1m]
             )
         ) * 100
