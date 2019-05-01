@@ -5,22 +5,22 @@ metadata:
   name: myapp
   namespace: myapp
   annotations:
-    flux.weave.works/ignore: 'false'
+    flux.weave.works/ignore: 'true'
     flux.weave.works/automated: "true"
     flux.weave.works/tag.chart-image: semver:~1.0
 spec:
   releaseName: myapp
   chart:
-    git: git@github.com:jabberwock888/cd-containers.git
+    git: git@github.com:skhedim/gitops-canary-demo.git
     path: charts/myapp
     ref: master
   values:
     image:
-      repository: jabberwock88/cd-container
-      tag: 1.0.4
+      repository: REGISTRY/REPOSITORY/myapp
+      tag: 1.0.0
     canary:
       enabled: true
       istioIngress:
         enabled: true
         gateway: cloud-gw.istio-system.svc.cluster.local
-        host: 188.166.132.140.xip.io
+        host: <MY_SVC_IP>.xip.io

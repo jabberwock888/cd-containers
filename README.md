@@ -399,9 +399,9 @@ docker push REGISTRY/REPOSITORY/myapp:1.0.1
 kubectl -n flux logs -f $(kubectl -n flux get pods -l app=flux -o jsonpath='{.items[0].metadata.name}')
 ```
 
-Une fois que flux a détecté qu'une nouvelle image a été poussé dans la registry, que son tag correspond au filtre "tag.chart-image: semver:~1.0" Il déploie l'image et incrémente la révision du helm chart.
+Once Flux has detected that a new image has been pushed into the registry, that its tag matches the filter "tag.chart-image: semver:~1.0". It deploys the image and increments the helm chart revision.
 
-A la suite de ça, Flagger qui surveille le namespace myapp et attends pour q'uune image soit changé sur un déploiement. Quand il detecte le changement d'image opéré par Flux, il va créer un second déploiement avec l'ancienne image, un autre avec la nouvelle nommé myapp-canary et créer un Virtual service pour load balancer le traffic entre les deux déploiements.
+After that, Flagger who monitors the myapp namespace and waits for an image to be changed on a deployment. When it detects the image change made by Flux, it will create a second deployment with the old image, another with the new one named myapp-canary and create a Virtual service to load and balance traffic between the two deployments.
 
 ```yaml
 apiVersion: networking.istio.io/v1alpha3
@@ -450,3 +450,152 @@ NAME    STATUS      WEIGHT
 myapp   Progressing   10      
 ```
 
+Now let's see how Flagger determines if it should continue to direct traffic to the new version of the application or if it should rollback to the old version.
+
+To analyze the traffic we will use the kiali dashboard provided with Istio, to detect HTTP codes and traffic on our application
+
+```bash
+# Command used to access the kiali dashbord
+kubectl port-forward svc/kiali 8080:20001 -n istio-system &
+```
+
+Now access the following URL http://localhost:8080/kiali, (if this doesn't work try it in private browsing). Use the admin login and the admin password, and go to the graph part, finally choose the myapp namespace to see the graph of our application appear.
+
+Failed Canary analysis
+----------------------
+
+We will build a new image and increment the tag to launch a new canary analysis and see the flagger behavior.
+
+```html
+<!--Change the version H2 title-->
+<!DOCTYPE html>
+<html>
+<body>
+
+<h2>Welcome to myapp v1.0.2</h2>
+
+</body>
+</html>
+```
+
+```bash
+# Change REGISTRY/REPOSITORY with the correct values for your registry.
+docker build -t REGISTRY/REPOSITORY/myapp:1.0.2 .
+docker push REGISTRY/REPOSITORY/myapp:1.0.2
+
+# Check the images tags of each deployment
+kubectl get deploy -n myapp -o yaml | grep image        
+        - image: repository/myapp:1.0.2
+          imagePullPolicy: Always
+        - image: repository/myapp:1.0.1
+          imagePullPolicy: Always
+
+# Once the image update is complete, the canary analysis starts
+kubectl get canary -n myapp
+NAME    STATUS   WEIGHT   
+myapp   Progressing   0 
+```
+
+We will generate traffic. You can then look at the graph in kiali and you can see the virtual service directing traffic on both deployments, and error codes, for the moment there should only be code 200 indicating that everything works well on our application. We can see the canary analysis progressing to the new version.
+
+```bash
+# generate traffic on your deployment
+curl -L https://goo.gl/S1Dc3R | bash -s 20 "http://<MY_SVC_IP>.xip.io"
+# Check the graph in the kiali console and after and after 1 or 2 minutes watch the progress of the analysis
+CTRL+C
+kubectl get canary -n myapp
+NAME    STATUS   WEIGHT   
+myapp   Progressing   20 
+```
+
+According to the configuration of the canary analysis as long as there is no error, the progression to the new application is done in steps of 5% of the traffic. We will now generate 404 errors and look at the deployment behavior
+
+```bash
+# generate traffic on your deployment on a non existent page to generate 404 errors
+curl -L https://goo.gl/S1Dc3R | bash -s 20 "http://<MY_SVC_IP>.xip.io/notfound"
+# Check the graph in the kiali console and after and after few minutes watch the progress of the analysis
+CTRL+C
+kubectl get canary -n myapp
+NAME    STATUS   WEIGHT   
+myapp   failed   0 
+```
+
+The analysis failed because more than 5% of the traffic contained 404 errors. By default Flagger only takes into account 5XX errors in its analysis, but The canary analysis can be extended with custom Prometheus queries. For this demo I added a control on 404 errors to easily make the analysis fail.
+
+```json
+    metrics:
+    - name: "404s percentage"
+      threshold: 5
+      query: |
+        100 - sum(
+            rate(
+                istio_requests_total{
+                  reporter="destination",
+                  destination_workload_namespace="test",
+                  destination_workload="podinfo",
+                  response_code!="404"
+                }[1m]
+            )
+        )
+        /
+        sum(
+            rate(
+                istio_requests_total{
+                  reporter="destination",
+                  destination_workload_namespace="test",
+                  destination_workload="podinfo"
+                }[1m]
+            )
+        ) * 100
+```
+
+The analysis having failed flagger a rollback on the previous version of the application, if you go to the URL of the application. you will see that you always in version 1.0.1.
+
+Successful Canary analysis
+--------------------------
+
+We will build a new image and increment the tag to launch a new canary analysis and see the flagger behavior.
+
+```html
+<!--Change the version H2 title-->
+<!DOCTYPE html>
+<html>
+<body>
+
+<h2>Welcome to myapp v1.0.3</h2>
+
+</body>
+</html>
+```
+
+```bash
+# Change REGISTRY/REPOSITORY with the correct values for your registry.
+docker build -t REGISTRY/REPOSITORY/myapp:1.0.3 .
+docker push REGISTRY/REPOSITORY/myapp:1.0.2
+
+# Check the images tags of each deployment
+kubectl get deploy -n myapp -o yaml | grep image        
+        - image: repository/myapp:1.0.2
+          imagePullPolicy: Always
+        - image: repository/myapp:1.0.3
+          imagePullPolicy: Always
+
+# Once the image update is complete, the canary analysis starts
+kubectl get canary -n myapp
+NAME    STATUS   WEIGHT   
+myapp   Progressing   0 
+```
+
+We will generate traffic. You can then look at the graph in kiali and you can see the virtual service directing traffic on both deployments, and error codes, for the moment there should only be code 200 indicating that everything works well on our application. We can see the canary analysis progressing to the new version.
+
+```bash
+# generate traffic on your deployment
+curl -L https://goo.gl/S1Dc3R | bash -s 20 "http://<MY_SVC_IP>.xip.io"
+# Check the graph in the kiali console and after and after a few minutes watch the progress of the analysis
+CTRL+C
+kubectl get canary -n myapp
+NAME    STATUS   WEIGHT   
+myapp   Succeeded   0 
+```
+
+This time as we did not generate any 404 errors, the analysis is finished and the new version is deployed, now if you go to the application's URL, you will see that it is version 1.0.3 that is deployed.
